@@ -157,9 +157,8 @@ function buildWater() {
 
 function toggleCup(i, meta) {
   const count = state.water[TODAY] || 0;
-  // if clicking filled cup → unfill from that cup onward (toggle off)
-  // if clicking empty cup → fill up to that cup
   const newCount = i < count ? i : i + 1;
+  const wasAdded = newCount > count;
   state.water[TODAY] = newCount;
   if(newCount === meta && count < meta) {
     addXP(15, 5, document.getElementById('waterCups'));
@@ -169,6 +168,11 @@ function toggleCup(i, meta) {
   }
   save(state);
   buildWater(); updateTodayXP(); buildDateStrip(); updateStreakProgress();
+  // animação de pop no copo tocado
+  if(wasAdded) {
+    const cups = document.querySelectorAll('#waterCups .cup');
+    if(cups[i]) cups[i].classList.add('filling');
+  }
 }
 
 // ── HABITS (with custom) ──
@@ -223,6 +227,44 @@ function toggleHabit(h, el) {
   checkFlower();
   save(state);
   buildHabits(); buildDateStrip(); updateTodayXP();
+
+  if(!was) {
+    // bounce animation na linha recém-marcada
+    const allHabits = getHabits();
+    const idx = allHabits.findIndex(x => x.id === h.id);
+    const rows = document.querySelectorAll('#habitsList .habit-row');
+    if(rows[idx]) {
+      rows[idx].classList.add('bouncing');
+      setTimeout(() => rows[idx] && rows[idx].classList.remove('bouncing'), 600);
+    }
+    // confete ao completar 100% dos hábitos
+    const done = state.habits[TODAY] || {};
+    if(allHabits.every(hb => done[hb.id])) launchConfetti();
+  }
+}
+
+function launchConfetti() {
+  const colors = ['#c96fa8','#e891c8','#f5c842','#6dcc7a','#6ab4f5','#f0e6ff','#ff9de2'];
+  const container = document.getElementById('app');
+  for(let i = 0; i < 70; i++) {
+    setTimeout(() => {
+      const p = document.createElement('div');
+      const size = Math.random() * 7 + 4;
+      p.className = 'confetti-particle';
+      p.style.cssText = [
+        `left:${Math.random()*95}%`,
+        `background:${colors[Math.floor(Math.random()*colors.length)]}`,
+        `width:${size}px`,
+        `height:${size * (Math.random() > 0.5 ? 1 : 2.5)}px`,
+        `border-radius:${Math.random() > 0.4 ? '50%' : '2px'}`,
+        `animation-duration:${(Math.random()*1.2+1.1).toFixed(2)}s`,
+        `animation-delay:${(Math.random()*0.4).toFixed(2)}s`,
+      ].join(';');
+      container.appendChild(p);
+      setTimeout(() => p.remove(), 2800);
+    }, Math.random() * 400);
+  }
+  toast('🎉 Todos os hábitos completos! Incrível!');
 }
 
 // ── STREAK / DAY COMPLETE ──
