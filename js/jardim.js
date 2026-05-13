@@ -96,6 +96,7 @@
   }
 
   /* ── Sky & Ciclo Dia/Noite ───────────────────────────────── */
+  // Usa getHours() (horário local do dispositivo), não getUTCHours()
   function drawSky(ctx, W, H) {
     const now  = new Date();
     const h    = now.getHours() + now.getMinutes() / 60;
@@ -105,22 +106,22 @@
       [h1,s1,l1, h2,s2,l2] = [270,55,8, 280,45,16];
     } else if (h < 7) {                  // pré-amanhecer
       const t = (h - 5) / 2;
-      [h1,s1,l1] = [lerp(270,200,t), 55, lerp(8,22,t)];
-      [h2,s2,l2] = [lerp(280,210,t), 45, lerp(16,34,t)];
+      [h1,s1,l1] = [lerp(270,205,t), lerp(55,70,t), lerp(8,35,t)];
+      [h2,s2,l2] = [lerp(280,195,t), lerp(45,58,t), lerp(16,50,t)];
     } else if (h < 9) {                  // amanhecer
       const t = (h - 7) / 2;
-      [h1,s1,l1] = [lerp(200,220,t), 55, lerp(22,30,t)];
-      [h2,s2,l2] = [lerp(210,240,t), 44, lerp(34,42,t)];
-    } else if (h < 17) {                 // dia pleno
-      [h1,s1,l1, h2,s2,l2] = [220,55,30, 240,42,42];
-    } else if (h < 19) {                 // tarde
+      [h1,s1,l1] = [lerp(205,205,t), lerp(70,75,t), lerp(35,55,t)];
+      [h2,s2,l2] = [lerp(195,190,t), lerp(58,62,t), lerp(50,68,t)];
+    } else if (h < 17) {                 // dia pleno — céu azul claro
+      [h1,s1,l1, h2,s2,l2] = [205,75,55, 190,62,68];
+    } else if (h < 19) {                 // tarde / pôr do sol
       const t = (h - 17) / 2;
-      [h1,s1,l1] = [lerp(220,240,t), 52, lerp(30,22,t)];
-      [h2,s2,l2] = [lerp(240,270,t), 44, lerp(42,30,t)];
+      [h1,s1,l1] = [lerp(205,28,t), lerp(75,78,t), lerp(55,42,t)];
+      [h2,s2,l2] = [lerp(190,18,t), lerp(62,68,t), lerp(68,55,t)];
     } else if (h < 21) {                 // anoitecer
       const t = (h - 19) / 2;
-      [h1,s1,l1] = [lerp(240,270,t), 50, lerp(22,10,t)];
-      [h2,s2,l2] = [lerp(270,280,t), 45, lerp(30,18,t)];
+      [h1,s1,l1] = [lerp(28,270,t), lerp(78,55,t), lerp(42,8,t)];
+      [h2,s2,l2] = [lerp(18,280,t), lerp(68,45,t), lerp(55,16,t)];
     } else {                             // noite
       [h1,s1,l1, h2,s2,l2] = [270,55,8, 280,45,16];
     }
@@ -469,6 +470,35 @@
     ctx.restore();
   }
 
+  /* ── Itens da Loja no Canvas ────────────────────────────── */
+  function getOwnedItemLevel(itemId) {
+    const purchase = (gs.itemPurchases || {})[itemId];
+    if (!purchase) return 0;
+    const days = Math.floor((Date.now() - purchase.ts) / (1000 * 60 * 60 * 24));
+    if (days >= 30) return 3;
+    if (days >= 14) return 2;
+    if (days >= 7)  return 1;
+    return 0;
+  }
+
+  function drawShopItems(ctx, W, H) {
+    const owned = gs.owned || [];
+    if (!owned.length) return;
+    const shopItems = (typeof SHOP_ITEMS !== 'undefined') ? SHOP_ITEMS : [];
+    ctx.save();
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    owned.forEach(id => {
+      const item = shopItems.find(s => s.id === id);
+      if (!item) return;
+      const level = getOwnedItemLevel(id);
+      const icon  = item.levels[Math.min(level, item.levels.length - 1)];
+      ctx.font = `26px "Apple Color Emoji","Segoe UI Emoji",serif`;
+      ctx.fillText(icon, item.gx * W, item.gy * H);
+    });
+    ctx.restore();
+  }
+
   /* ── Dispatch ────────────────────────────────────────────── */
   function drawPlant(ctx, p, t) {
     switch (p.id) {
@@ -561,6 +591,7 @@
 
     drawSky(ctx, W, H);
     drawGround(ctx, W, H);
+    drawShopItems(ctx, W, H);
     drawMemoryFlowers(ctx, W, H);
     plants.forEach(p => drawPlant(ctx, p, t));
     drawTooltip(ctx, W);
